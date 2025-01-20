@@ -4,17 +4,20 @@ import com.scaler.userauthenticationservice.exceptions.PasswordMismatchException
 import com.scaler.userauthenticationservice.exceptions.UserAlreadyExistException;
 import com.scaler.userauthenticationservice.exceptions.UserNotRegisteredException;
 import com.scaler.userauthenticationservice.models.Role;
+import com.scaler.userauthenticationservice.models.Session;
+import com.scaler.userauthenticationservice.models.Status;
 import com.scaler.userauthenticationservice.models.User;
+import com.scaler.userauthenticationservice.repos.SessionRepo;
 import com.scaler.userauthenticationservice.repos.UserRepo;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.MacAlgorithm;
 import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
@@ -25,6 +28,13 @@ public class AuthService implements IAuthService {
 
     @Autowired
     private BCryptPasswordEncoder bCryptPasswordEncoder;
+
+    @Autowired
+    private SessionRepo sessionRepo;
+
+    @Autowired
+    SecretKey secretKey;
+
 
     @Override
     public User signUp(String email, String password) throws UserAlreadyExistException {
@@ -76,16 +86,44 @@ public class AuthService implements IAuthService {
         payload.put("userId", user.getId());
         payload.put("iss", "scaler"); // issuer
 
-        MacAlgorithm algorithm = Jwts.SIG.HS256;
-        SecretKey secretKey = algorithm.key().build();
+//        MacAlgorithm algorithm = Jwts.SIG.HS256;
+//        SecretKey secretKey = algorithm.key().build();
         String token = Jwts.builder().claims(payload).signWith(secretKey).compact();
+
+        Session session = new Session();
+        session.setCreatedAt(new Date());
+        session.setLastUpdatedAt(new Date());
+        session.setToken(token);
+        session.setUser(user);
+        session.setStatus(Status.ACTIVE);
+        sessionRepo.save(session);
 
         return new Pair<User, String>(user, token);
     }
 
-    public void validateToken(String token) throws UserNotRegisteredException {
-        // check if token stored in db is matching with this token
-        // whether the token hqs expired or not , currentTimestamp > expiryTimeStamp
-        // get payload(claims).getExpiry()
+    @Override
+    public Boolean validateToken(String token, Long userId) {
+
+        Optional<Session> sessionOptional = sessionRepo.findByTokenAndUserId(token, userId);
+        if(sessionOptional.isEmpty()){
+            return false;
+//            throw new UserNotRegisteredException("Please sign up first...");
+        }
+        String persistedToken = sessionOptional.get().getToken();
+        JwtParser jwtParser = (JwtParser) Jwts.parser().verifyWith(secretKey);
+        Claims claims = jwtParser.parseSignedClaims(token).getPayload();
+//        Long tokenExp = claims.getExpiration().getTime();
+        Long tokenExp = (Long) claims.get("exp");
+
+        Long currentTime = System.currentTimeMillis();
+
+        if(currentTime > tokenExp){
+            Session session = sessionOptional.get();
+            session.setStatus(Status.INACTIVE);
+            sessionRepo.save(session);
+//            throw new UserNotRegisteredException("Please login first...");
+            return false;
+        }
+        return true;
     }
 }

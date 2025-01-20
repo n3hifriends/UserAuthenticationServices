@@ -3,7 +3,9 @@ package com.scaler.userauthenticationservice.controllers;
 import com.scaler.userauthenticationservice.dtos.LoginRequest;
 import com.scaler.userauthenticationservice.dtos.SignupRequest;
 import com.scaler.userauthenticationservice.dtos.UserDto;
+import com.scaler.userauthenticationservice.dtos.ValidateTokenDto;
 import com.scaler.userauthenticationservice.exceptions.PasswordMismatchException;
+import com.scaler.userauthenticationservice.exceptions.UnAuthorizedException;
 import com.scaler.userauthenticationservice.exceptions.UserAlreadyExistException;
 import com.scaler.userauthenticationservice.exceptions.UserNotRegisteredException;
 import com.scaler.userauthenticationservice.models.User;
@@ -57,5 +59,14 @@ public class AuthController {
         userDto.setEmail(user.getEmail());
         userDto.setRoles(user.getRoles());
         return userDto;
+    }
+
+    @PostMapping("/validateToken")
+    Boolean validateToken(@RequestBody ValidateTokenDto validateTokenDto) throws UnAuthorizedException {
+        Boolean result = authService.validateToken(validateTokenDto.getToken(), validateTokenDto.getUserId());
+        if(!result){
+            throw new UnAuthorizedException("Please login again, Inconvenience regretted");
+        }
+        return result;
     }
 }
