@@ -8,9 +8,13 @@ import com.scaler.userauthenticationservice.exceptions.UserAlreadyExistException
 import com.scaler.userauthenticationservice.exceptions.UserNotRegisteredException;
 import com.scaler.userauthenticationservice.models.User;
 import com.scaler.userauthenticationservice.services.IAuthService;
+import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,10 +38,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<UserDto> loging(@RequestBody LoginRequest loginRequest){
+    public ResponseEntity<UserDto> login(@RequestBody LoginRequest loginRequest){
         try {
-            User user = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
-            return new ResponseEntity<>(fromUser(user), HttpStatus.OK);
+            Pair<User, String> response = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
+            MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
+            headers.add(HttpHeaders.SET_COOKIE, response.b);
+            return new ResponseEntity<>(fromUser(response.a), headers, HttpStatus.OK);
         } catch (UserNotRegisteredException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (PasswordMismatchException e) {
