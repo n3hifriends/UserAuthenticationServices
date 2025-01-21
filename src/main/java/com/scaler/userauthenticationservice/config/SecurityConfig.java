@@ -13,15 +13,15 @@ import javax.crypto.SecretKey;
 @Configuration
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        // disable default login page auto created by spring security
-        httpSecurity.cors().disable();
-        httpSecurity.csrf().disable();
-        httpSecurity.authorizeHttpRequests(autherize -> autherize.anyRequest().permitAll());
-
-        return httpSecurity.build();
-    }
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+//        // disable default login page auto created by spring security
+//        httpSecurity.cors().disable();
+//        httpSecurity.csrf().disable();
+//        httpSecurity.authorizeHttpRequests(autherize -> autherize.anyRequest().permitAll());
+//
+//        return httpSecurity.build();
+//    }
 
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder(){
