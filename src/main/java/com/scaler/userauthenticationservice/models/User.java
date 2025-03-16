@@ -15,6 +15,6 @@ import java.util.List;
 public class User extends BaseModel{
     private String email;
     private String password;
-    @ManyToMany(cascade = CascadeType.MERGE) // add spring boot started data jps & mysql-connector
+    @ManyToMany(cascade = CascadeType.ALL) // add spring boot started data jps & mysql-connector
     private List<Role> roles = new ArrayList<>();
 }

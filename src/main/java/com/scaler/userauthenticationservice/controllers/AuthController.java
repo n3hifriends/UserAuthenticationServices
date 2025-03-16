@@ -62,11 +62,12 @@ public class AuthController {
     }
 
     @PostMapping("/validateToken")
-    Boolean validateToken(@RequestBody ValidateTokenDto validateTokenDto) throws UnAuthorizedException {
+    ResponseEntity<Boolean> validateToken(@RequestBody ValidateTokenDto validateTokenDto) {
         Boolean result = authService.validateToken(validateTokenDto.getToken(), validateTokenDto.getUserId());
         if(!result){
-            throw new UnAuthorizedException("Please login again, Inconvenience regretted");
+            return new ResponseEntity<>(false, HttpStatus.OK);
+//            throw new UnAuthorizedException("Please login again, Inconvenience regretted");
         }
-        return result;
+        return new ResponseEntity<>(true, HttpStatus.OK);
     }
 }

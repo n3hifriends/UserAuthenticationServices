@@ -18,4 +18,10 @@ public class UserService {
         Optional<User> user = userRepo.findByEmail(email);
         return user.orElse(null);
     }
+
+    public User getUserDetails(Long id) {
+        Optional<User> optionalUser = userRepo.findById(id);
+        if(optionalUser.isEmpty()) return null;
+        return optionalUser.get();
+    }
 }

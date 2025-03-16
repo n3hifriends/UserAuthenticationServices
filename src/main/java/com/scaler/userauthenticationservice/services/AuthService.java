@@ -1,5 +1,9 @@
 package com.scaler.userauthenticationservice.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.scaler.userauthenticationservice.clients.KafkaProducerClient;
+import com.scaler.userauthenticationservice.dtos.EmailDto;
 import com.scaler.userauthenticationservice.exceptions.PasswordMismatchException;
 import com.scaler.userauthenticationservice.exceptions.UserAlreadyExistException;
 import com.scaler.userauthenticationservice.exceptions.UserNotRegisteredException;
@@ -35,6 +39,11 @@ public class AuthService implements IAuthService {
     @Autowired
     SecretKey secretKey;
 
+    @Autowired
+    private KafkaProducerClient kafkaProducerClient;
+
+    @Autowired
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public User signUp(String email, String password) throws UserAlreadyExistException {
@@ -50,11 +59,28 @@ public class AuthService implements IAuthService {
 
         Role role = new Role();
         role.setValue("CUSTOMER");
+        role.setStatus(Status.ACTIVE);
+        role.setCreatedAt(new Date());
+        role.setLastUpdatedAt(new Date());
         List<Role> roles = new ArrayList<>();
         roles.add(role);
         user.setRoles(roles);
 
         userRepo.save(user);
+
+        //send message into Kafka
+        try {
+            EmailDto emailDto = new EmailDto();
+            emailDto.setTo(email);
+            emailDto.setFrom("n3.hifriends@gmail.com");
+            emailDto.setSubject("User Registration");
+            emailDto.setBody("Welcome to Scaler");
+
+            kafkaProducerClient.sendMessage("signup", objectMapper.writeValueAsString(emailDto));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+
         return user;
     }
 
@@ -66,7 +92,7 @@ public class AuthService implements IAuthService {
         }
 
         User user = userOptional.get();
-        if(!bCryptPasswordEncoder.matches(password, user.getPassword())){
+        if (!bCryptPasswordEncoder.matches(password, user.getPassword())) {
 //        if (!user.getPassword().equals(password)) {
             throw new PasswordMismatchException("Please add correct password...");
         }
@@ -81,7 +107,7 @@ public class AuthService implements IAuthService {
         Long nowInMillis = System.currentTimeMillis();
 
         payload.put("iat", nowInMillis); // issued at
-        payload.put("exp", nowInMillis+100000); //sec // expiry at + 24hrs
+        payload.put("exp", nowInMillis + 100000); //sec // expiry at + 24hrs
         payload.put("scope", user.getRoles());
         payload.put("userId", user.getId());
         payload.put("iss", "scaler"); // issuer
@@ -103,27 +129,28 @@ public class AuthService implements IAuthService {
 
     @Override
     public Boolean validateToken(String token, Long userId) {
+        Optional<Session> optionalSession = sessionRepo.findByTokenAndUserId(token,userId);
 
-        Optional<Session> sessionOptional = sessionRepo.findByTokenAndUserId(token, userId);
-        if(sessionOptional.isEmpty()){
+        if(optionalSession.isEmpty()) {
             return false;
-//            throw new UserNotRegisteredException("Please sign up first...");
         }
-        String persistedToken = sessionOptional.get().getToken();
-        JwtParser jwtParser = (JwtParser) Jwts.parser().verifyWith(secretKey);
-        Claims claims = jwtParser.parseSignedClaims(token).getPayload();
-//        Long tokenExp = claims.getExpiration().getTime();
-        Long tokenExp = (Long) claims.get("exp");
 
+        JwtParser jwtParser = Jwts.parser().verifyWith(secretKey).build();
+        Claims claims = jwtParser.parseSignedClaims(token).getPayload();
+
+        Long tokenExpiry = (Long) claims.get("exp");
         Long currentTime = System.currentTimeMillis();
 
-        if(currentTime > tokenExp){
-            Session session = sessionOptional.get();
+        System.out.println(tokenExpiry);
+        System.out.println(currentTime);
+
+        if(currentTime > tokenExpiry) {
+            Session session = optionalSession.get();
             session.setStatus(Status.INACTIVE);
             sessionRepo.save(session);
-//            throw new UserNotRegisteredException("Please login first...");
             return false;
         }
+
         return true;
     }
 }

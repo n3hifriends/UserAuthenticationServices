@@ -25,6 +25,13 @@ public class UserController {
         return fromUser(user);
     }
 
+    @GetMapping("/userId/{id}")
+    public UserDto getUserById(@PathVariable Long id) {
+        User user = userService.getUserDetails(id);
+        if(user == null) return null;
+        return fromUser(user);
+    }
+
     public UserDto fromUser(User user){
         UserDto userDto = new UserDto();
         userDto.setId(user.getId());
