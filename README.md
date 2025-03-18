@@ -9,7 +9,7 @@ COPY target/UserAuthenticationServices-0.0.1-SNAPSHOT.jar app.jar
 # to run java app:-> java -jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-#3nitin -> is my account name: n3.hifriends@gmail.com -> Newp@as123 (https://hub.docker.com)
+#3nitin -> is my account name: hifriends@gmail.com -> p@as123New (https://hub.docker.com)
 # to build -> docker build -t 3nitin/dec2024:v1 .
 # to run (create container) -> docker run -t 3nitin/dec2024:v1 .
 # to generate docker image -> docker push 3nitin/dec2024:v1
